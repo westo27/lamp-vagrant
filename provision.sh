@@ -75,7 +75,7 @@ wget -O /tmp/RPM-GPG-KEY-mysql https://repo.mysql.com/RPM-GPG-KEY-mysql >> /vagr
 sudo apt-key add /tmp/RPM-GPG-KEY-mysql >> /vagrant/build.log 2>&1
 
 echo "-- Adding MySQL repo --"
-echo "deb http://repo.mysql.com/apt/debian/ buster mysql-5.7" | sudo tee /etc/apt/sources.list.d/mysql.list >> /vagrant/build.log 2>&1
+echo "deb http://repo.mysql.com/apt/debian/ bus mysql-5.7" | sudo tee /etc/apt/sources.list.d/mysql.list >> /vagrant/build.log 2>&1
 
 echo "-- Updating package lists after adding MySQL repo --"
 sudo aptitude update -y >> /vagrant/build.log 2>&1
@@ -107,25 +107,33 @@ sudo mysql -u root -p$mysql_root_pass -e "GRANT ALL PRIVILEGES ON $mysql_user_db
 sudo mysql -u root -p$mysql_root_pass -e "FLUSH PRIVILEGES;" >> /vagrant/build.log 2>&1
 
 echo "-- Installing PHP stuff --"
-sudo aptitude install -y libapache2-mod-php7.4 php7.4 php7.4-dev php7.4-pdo php7.4-mysql php7.4-mbstring php7.4-xml php7.4-intl php7.4-tokenizer php7.4-gd php7.4-imagick php7.4-curl php7.4-zip >> /vagrant/build.log 2>&1
+sudo aptitude install -y libapache2-mod-php8.0 php8.0 php8.0-dev php8.0-pdo php8.0-mysql php8.0-mbstring php8.0-xml php8.0-intl php8.0-tokenizer php8.0-gd php8.0-imagick php8.0-curl php8.0-zip >> /vagrant/build.log 2>&1
 
 echo "-- Installing Xdebug --"
-sudo aptitude install -y php-xdebug >> /vagrant/build.log 2>&1
+sudo aptitude install -y php8.0-xdebug
 
-echo "-- Configuring xDebug (idekey = PHP_STORM) --"
-sudo tee -a /etc/php/7.4/mods-available/xdebug.ini << END
-xdebug.remote_enable=1
-xdebug.remote_connect_back=1
-xdebug.remote_port=9001
-xdebug.idekey=PHP_STORM
+echo "-- Configuring xDebug (idekey = PHPSTORM) --"
+sudo tee -a /etc/php/8.0/mods-available/xdebug.ini << END
+zend_extension=xdebug.so
+xdebug.remote_enable=on
+xdebug.remote_autostart=1
+xdebug.remote_connect_back=on
+
+END
+
+sudo tee -a /etc/php/8.0/apache2/php.ini << END
+zend_extension=/usr/lib/php/20190902/xdebug.so
+xdebug.client_host=192.168.33.1
+xdebug.mode=debug
+
 END
 
 echo "-- Custom configure for PHP --"
-sudo tee -a /etc/php/7.4/mods-available/custom.ini << END
+sudo tee -a /etc/php/8.0/mods-available/custom.ini << END
 error_reporting = E_ALL
 display_errors = on
 END
-sudo ln -s /etc/php/7.4/mods-available/custom.ini /etc/php/7.4/apache2/conf.d/00-custom.ini  >> /vagrant/build.log 2>&1
+sudo ln -s /etc/php/8.0/mods-available/custom.ini /etc/php/8.0/apache2/conf.d/00-custom.ini  >> /vagrant/build.log 2>&1
 
 echo "-- Installing phpmyadmin --"
 sudo aptitude install -q -y -f phpmyadmin >> /vagrant/build.log 2>&1
@@ -144,4 +152,8 @@ echo "-- Installing Git --"
 sudo aptitude install -y git >> /vagrant/build.log 2>&1
 
 echo "-- Installing Composer --"
-curl -sS https://getcomposer.org/installer | sudo php -- --install-dir=/usr/local/bin --filename=composer >> /vagrant/build.log 2>&1
+curl -s https://getcomposer.org/installer | sudo php -- --install-dir=/usr/local/bin --filename=composer >> /vagrant/build.log 2>&1
+
+echo "-- Installing MailHog --"
+sudo apt-get -y install golang-go
+go get github.com/mailhog/MailHog
